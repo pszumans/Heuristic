@@ -113,12 +113,12 @@ public class Link extends DefaultWeightedEdge implements Comparator<Link> {
 		return usingCapacity;
 	}
 	
-	public int checkCapacityUsed(int usingCapacity) {
-		if (usingCapacity <= capacityRemained) {
-			return usingCapacity;
+	public int checkCapacityUsed(int toUseCapacity) {
+		if (toUseCapacity <= capacityRemained) {
+			return toUseCapacity;
 		}
 		else if (capacityRemained > 0) {
-			return usingCapacity - capacityUsed;
+			return toUseCapacity - capacityUsed;
 		}
 		return 0;
 	}

@@ -21,8 +21,8 @@ public class DataCenter implements Rack.ServersPool {
 	private List<DataServer> dataServers;
 	private List<CompServer> compServers;
 
-	private List<Demand> demandsServed;
-	private Set<String> demandsChosen;
+	private List<Demand> servedDemands;
+//	private Set<String> demandsChosen;
 	// private Set<String> racksChosen;
 
 	public int sDC = 0;
@@ -38,8 +38,8 @@ public class DataCenter implements Rack.ServersPool {
 		this.minDemandsToServe = minDemandsToServe;
 		racks = graph.getRacks();
 		links = graph.getLinks();
-		demandsServed = new ArrayList<Demand>();
-		demandsChosen = new HashSet<String>();
+		servedDemands = new ArrayList<Demand>();
+//		demandsChosen = new HashSet<String>();
 		// racksChosen = new HashSet<String>();
 		setServersPools();
 	}
@@ -80,24 +80,19 @@ public class DataCenter implements Rack.ServersPool {
 		return demandsToServe.get(index);
 	}
 
-	public Demand getRandomDemandToServe() {
+	public Demand getRandomDemandToServe(Set<String> servedDemands) {
 		Demand demand = null;
-		int demandsCount = demandsChosen.size();
-		if (!areAllDemandsChecked()) {
-			while (demandsCount == demandsChosen.size()) {
+		int demandsCount = servedDemands.size();
+		if (servedDemands.size() != demandsToServe.size()) {
+			while (demandsCount == servedDemands.size()) {
 				demand = demandsToServe.get(new Random().nextInt(demandsToServe.size()));
-				demandsChosen.add(demand.getName());
+				servedDemands.add(demand.getName());
 			}
 		}
+		if (demand != null)
+			demand = new Demand(demand);
 		return demand;
-		// Demand demand = demandsToServe.get(new
-		// Random().nextInt(demandsToServe.size()));
-		// while (true) {
-		// if (demandsChosen.contains(demand.getName()))
-		// return demand;
-		// demand = demandsToServe.get(new
-		// Random().nextInt(demandsToServe.size()));
-		// }
+
 	}
 
 	public int getDemandsToServeAmount() {
@@ -105,19 +100,15 @@ public class DataCenter implements Rack.ServersPool {
 	}
 
 	public Demand getDemand(int index) {
-		return demandsServed.get(index);
+		return servedDemands.get(index);
 	}
 
 	public Demand getRandomDemand() {
-		return demandsServed.get(new Random().nextInt(demandsServed.size()));
+		return servedDemands.get(new Random().nextInt(servedDemands.size()));
 	}
 
 	public int getDemandsAmount() {
-		return demandsServed.size();
-	}
-
-	public int getDemandsChosenAmount() {
-		return demandsChosen.size();
+		return servedDemands.size();
 	}
 
 	// public Rack getRack(int index) {
@@ -132,18 +123,24 @@ public class DataCenter implements Rack.ServersPool {
 		return racks.size();
 	}
 
+	public Set<String> getChosenDemands() {
+		Set<String> chosenDemands = new HashSet<String>();
+		for (Demand demand: servedDemands)
+			chosenDemands.add(demand.getName());
+		return chosenDemands;
+	}
 	// public Link getLink(int index) {
 	// return links.get(index);
 	// }
 
 	public void addDemand(Demand d) {
-		demandsServed.add(d);
+		servedDemands.add(d);
 	}
 
 	public void removeDemand(Demand demand) {
 		clearDemand(demand);
-		demandsChosen.remove(demand.getName());
-		demandsServed.remove(demand);
+//		demandsChosen.remove(demand.getName());
+		servedDemands.remove(demand);
 		sb.append(demand.getName() + " removed\n");
 	}
 
@@ -159,34 +156,20 @@ public class DataCenter implements Rack.ServersPool {
 		}
 	}
 
-	public void retrieveUnservedDemands() {
-		Set<String> temp = new HashSet<String>();
-		for (String demandName : demandsChosen)
-			for (Demand demand : demandsServed)
-				if (demandName.equals(demand.getName()))
-					temp.add(demandName);
-		demandsChosen = temp;
-	}
-
 	public void removeAllDemands() {
 		int demandsCount = getDemandsAmount();
 		for (int d = 0; d < demandsCount; d++)
 			removeDemand(getDemand(0));
-		demandsChosen.removeAll(demandsChosen);
+//		demandsChosen.removeAll(demandsChosen);
 	}
 
-	public boolean areAllDemandsChecked() {
-		return demandsChosen.size() == demandsToServe.size();
-	}
-
-	public boolean serveDemandInRack(Demand d, Rack rack, Set<String> checkedRacks) {
-		if (d == null)
+	public boolean serveDemandInRack(Demand demand, Rack rack, Set<String> checkedRacks) {
+		if (demand == null)
 			return false;
-		sb.append("serveDemandInRack(" + d.getName() + ", " + rack.getName() + ", " + checkedRacks.size() + ") x "
+		sb.append("serveDemandInRack(" + demand.getName() + ", " + rack.getName() + ", " + checkedRacks.size() + ") x "
 				+ ++sDC + "\n");
-		Demand demand = new Demand(d);
+//		Demand demand = new Demand(d);
 		Demand.DataDemand dd = demand.getDataDemand();
-		Demand.CompDemand cd = demand.getCompDemand();
 
 		checkedRacks.add(rack.getName());
 
@@ -212,52 +195,10 @@ public class DataCenter implements Rack.ServersPool {
 			clearDemand(demand);
 			return false;
 		}
-		return serveDemandInRack(d, getRandomRack(), checkedRacks);
+		return serveDemandInRack(demand, getRandomRack(), checkedRacks);
 
-		// if (!checkDD) {
-		// sb.append(demand.getName() + " DATA NOT Served\n");
-		// clearDemand(demand);
-		// }
-		//
-		// return checkDD;
 	}
-
-	// public boolean serveDemandInSecondRack(Demand demand, Rack rack,
-	// Set<String> checkedRacks) {
-	// sb.append("serveDemandInSecondRack(" + demand.getName() + ", " +
-	// rack.getName() + ", " + checkedRacks.size() + ") x " + ++sDCS + " #\n");
-	// Demand.DataDemand dd = demand.getDataDemand();
-	// Demand.CompDemand cd = demand.getCompDemand();
-	// //rack.updatePathsCapacity(links);
-	//// Rack.Path path = rack.chooseRandomPath(dd.getDemandName(),
-	// dd.getStorage());
-	// List<Rack.Path> paths = rack.chooseRandomPath(dd.getDemandName(),
-	// dd.getStorage());
-	// if (path == null) {
-	// sb.append("no paths #\n");
-	//// clearDemand(demand);
-	// return false;
-	// }
-	// updatePaths(path, demand.getName());
-	// Rack secondRack = path.getSecondRack();
-	// checkedRacks.add(secondRack.getName());
-	// boolean checkCD =
-	// racks.get(racks.indexOf(secondRack)).serveCompDemand(cd);
-	// if (checkCD) {
-	// sb.append(demand.getName() + " COMP Served #\n");
-	// return true;
-	// }
-	// if (checkedRacks.size() != racks.size() - 1) {
-	// sb.append("next second Rack #\n");
-	// checkCD = serveDemandInSecondRack(demand, rack, checkedRacks);
-	// }
-	// if (!checkCD) {
-	// sb.append(demand.getName() + " COMP NOT Served #\n");
-	//// clearDemand(demand);
-	// }
-	// return checkCD;
-	// }
-
+	
 	private boolean serveDemandFromRack(Demand demand, Rack rack, Set<String> checkedRacks) {
 		sb.append("serveDemandInSecondRack(" + demand.getName() + ", " + rack.getName() + ", " + checkedRacks.size()
 				+ ") x " + ++sDCS + " #\n");

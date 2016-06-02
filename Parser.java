@@ -44,12 +44,13 @@ public class Parser {
 		s = new Scanner(new BufferedReader(new FileReader(file)));
 		while (s.hasNextLine()) {
 			String data = s.next();
-			if (data.charAt(0) != '#')
-				addData(data);
+			if (data.matches("param:*"))
+				addData(s.next());
+//			if (data.charAt(0) == '#')
+//				addData(data);
 			else
 				s.nextLine();
 		}
-//		System.out.println(demands.get(0));
 	}
 
 	public void addData(String dataKey) {

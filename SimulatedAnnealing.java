@@ -38,16 +38,12 @@ public class SimulatedAnnealing {
 	
 	private boolean MetropolisTest(int newSolution) {
 		double rand = new Random().nextDouble();
-//		System.out.println("RAND " + rand);
 		return BolzmannDist(newSolution) > rand;
 
 	}
 		
 	private double BolzmannDist(int newSolution) {
-//		System.out.println((double)((bestSolution - newSolution) / temp));
 		double x = (double)(bestSolution - newSolution) / temp;
-//		System.out.println(Math.exp(x));
-//		return Math.exp((bestSolution - newSolution) / temp);
 		return Math.exp(x);
 	}
 	
