@@ -20,7 +20,7 @@ public class Rack {
 	private List<DataServer> dataServers;
 	private List<CompServer> compServers;
 //	private List<Server> servers;
-	private List<Path> paths;
+	private Map<String, List<Path>> paths;
 	
 	private ServersPool servers;
 	
@@ -42,7 +42,7 @@ public class Rack {
 		compDemands = new ArrayList<Demand.CompDemand>();
 		dataServers = new ArrayList<DataServer>();
 		compServers = new ArrayList<CompServer>();
-		paths = new ArrayList<Path>();
+		paths = new HashMap<String, List<Path>>();
 		
 	}
 	
@@ -72,13 +72,13 @@ public class Rack {
 		shelvesUsed = numberOfShelves - shelvesEmpty;
 	}
 	
-	public List<Path> getPaths() {
-		return paths;
+	public List<Path> getPathsBySecondRack(String secondRack) {
+		return paths.get(secondRack);
 	}
 
-	public void setPaths(List<Path> paths) {
-		this.paths = paths;
-	}
+//	public void setPaths(List<Path> paths) {
+//		this.paths = paths;
+//	}
 	
 	public void addDataDemand(Demand.DataDemand dd) {
 		dataDemands.add(dd);
@@ -238,7 +238,6 @@ public class Rack {
 		boolean isCDServed = false;
 		
 		for (CompServer cs: shuffledCompServers) {
-			if (isEnoughSpace(cs))
 				isCDServed = useCompServer(cd, cs);
 			if (isCDServed)
 				return true;				
@@ -270,12 +269,15 @@ public class Rack {
 		public int getCompServerAmount();
 	}
 	
-	public void addPath(Path path) {
-		paths.add(path);
+	public void addPath(String secondRack, Path path) {
+		if (!paths.containsKey(secondRack)) {
+			paths.put(secondRack, new ArrayList<Path>());
+		}
+		paths.get(secondRack).add(path);		
 	}
 		
-	public Path getRandomPath() {
-		return paths.get(new Random().nextInt(paths.size()));
+	public Path getRandomPath(String secondRack) {
+		return paths.get(secondRack).get(new Random().nextInt(this.paths.get(secondRack).size()));
 	}
 	
 	public DataServer getDataServer(int index) {
@@ -294,8 +296,8 @@ public class Rack {
 		return compServers.size();
 	}
 
-	public Path choosePath(int storage) {
-		for (Path path: paths)
+	public Path choosePath(String secondRack, int storage) {
+		for (Path path: paths.get(secondRack))
 			if (storage >= path.getCapacity())
 				return path;
 		return null;
@@ -317,20 +319,16 @@ public class Rack {
 ////		return null;
 //	}
 	
-	public boolean transportDemandToRack(String demandName, int usingCapacity, String secondRack) {
+	public boolean transportDemandToRack(String demandName, int toUseCapacity, String secondRack) {
 //		List<Path> chosenPaths = new ArrayList<Path>();
-		List<Path> shuffledPaths = paths;
+		List<Path> shuffledPaths = paths.get(secondRack);
 		Collections.shuffle(shuffledPaths);
 //		int remainToUseFlow = 
 		Path path = null;
 		for (int i = 0; i < shuffledPaths.size(); i++) {
 			path = shuffledPaths.get(i);
-			if (path.getSecondRack().getName().equals(secondRack)) {
-				usingCapacity = path.transportDemand(demandName, usingCapacity);
-				updatePaths(path, demandName);
-//				chosenPaths.add(path);
-			}
-			if (usingCapacity == 0)
+			toUseCapacity = path.transportDemand(demandName, toUseCapacity);
+			if (toUseCapacity == 0)
 //				return chosenPaths;
 				return true;
 		}
@@ -339,27 +337,28 @@ public class Rack {
 		return false;
 	}
 	
-	public void updatePaths(Path p, String demandName) {
-		int i = 0;
-		Map<String, Integer> flowsToUpdate = new HashMap<>();
-		for (Link l: p.links)
-			if (l.containsDemand(demandName))
-				flowsToUpdate.put(l.getName(), l.getFlowByDemand(demandName));
-		for (Path path: paths)
-			if (path != p)
-				for (Link link: path.links) {
-					if (flowsToUpdate.containsKey(link.getName())) {
-						link.addFlowPerDemand(demandName, flowsToUpdate.get(link.getName()));
-//					System.out.println(++i);
-//					System.out.println();
-					}
-				}
-	}
+//	public void updatePaths(Path p, String demandName) {
+//		int i = 0;
+//		Map<String, Integer> flowsToUpdate = new HashMap<>();
+//		for (Link l: p.links)
+//			if (l.containsDemand(demandName))
+//				flowsToUpdate.put(l.getName(), l.getFlowByDemand(demandName));
+//		for (Path path: paths)
+//			if (path != p)
+//				for (Link link: path.links) {
+//					if (flowsToUpdate.containsKey(link.getName())) {
+//						link.addFlowPerDemand(demandName, flowsToUpdate.get(link.getName()));
+////					System.out.println(++i);
+////					System.out.println();
+//					}
+//				}
+//	}
 	
 	public void resetPaths(String demandName) {
-		for (Path path: paths) {
-			path.clearDemand(demandName);
-			path.countCapacity();
+		for (String secondRack: paths.keySet())
+			for (Path path: paths.get(secondRack)) {
+				path.clearDemand(demandName);
+				path.countCapacity();
 		}
 	}
 	
@@ -371,20 +370,21 @@ public class Rack {
 		StringBuilder sb = new StringBuilder();
 		sb.append("\n###---> " + getName() + " <---###\n");
 		sb.append("size: " + getSize() + "\n");
-		boolean containsDD = false;
+//		boolean containsDD = false;
 		for (DataServer ds: dataServers) {
 			sb.append(ds);
-			if (!ds.isEmpty())
-				containsDD = true;
+//			if (!ds.isEmpty())
+//				containsDD = true;
 		}
 		for (CompServer cs: compServers) {
 			sb.append(cs);
 		}
 //		if (containsDD)
-			for (Path path: paths) {
-//				if (path.isUsed())
-					sb.append(path);
-			}
+//		for (String secondRack: paths.keySet())
+//			for (Path path: paths.get(secondRack)) {
+////				if (path.isUsed())
+//					sb.append(path);
+//			}
 		sb.append("\n");
 		return sb.toString();
 		
@@ -430,12 +430,12 @@ public class Rack {
 	public class Path {
 
 		private int index;
-		private Rack secondRack;
+		private String secondRack;
 		private List<Link> links;
 		private int capacity;
 		
 
-		public Path(int index, Rack secondRack, List<Link> links) {
+		public Path(int index, String secondRack, List<Link> links) {
 			this.index = index;
 			this.setSecondRack(secondRack);
 			this.links = links;
@@ -452,11 +452,11 @@ public class Rack {
 		}
 
 
-		public Rack getSecondRack() {
+		public String getSecondRack() {
 			return secondRack;
 		}
 
-		public void setSecondRack(Rack secondRack) {
+		public void setSecondRack(String secondRack) {
 			this.secondRack = secondRack;
 		}
 
@@ -485,13 +485,12 @@ public class Rack {
 			capacity = temp.get(0).getCapacityRemained();
 		}
 		
-		public int transportDemand(String demandName, int usingCapacity) {
+		public int transportDemand(String demandName, int toUseCapacity) {
 			
 //			boolean canTransport = true;
-			
 			int usedCapacity = Integer.MAX_VALUE;
 			for (Link link: links) {
-				int temp = link.checkCapacityUsed(usingCapacity);
+				int temp = link.checkCapacityUsed(toUseCapacity);
 				if (temp < usedCapacity)
 					usedCapacity = temp;
 				if (usedCapacity == 0)
@@ -511,7 +510,7 @@ public class Rack {
 				}
 			}
 			
-			return usingCapacity - usedCapacity;
+			return toUseCapacity - usedCapacity;
 		}
 		
 		public void clearDemand(String demandName) {
@@ -529,7 +528,7 @@ public class Rack {
 		public String toString() {
 			StringBuilder sb = new StringBuilder();
 			sb.append("\n###* " + getIndex() + " *###\n");
-			sb.append("secondRack: " + getSecondRack().getName() + "\n");
+			sb.append("secondRack: " + getSecondRack() + "\n");
 			for (Link link: links)
 				sb.append(link);
 			sb.append("\n");

@@ -116,7 +116,7 @@ public class GraphBuilder {
 			if (sr2 != sr1) {
 				List<GraphPath<Rack, Link>> paths = shortestPaths.getPaths(sr2);
 				for (int i = 0; i < paths.size(); i++) {
-					sr1.addPath(sr1.new Path(i, sr2, paths.get(i).getEdgeList()));
+					sr1.addPath(sr2.getName(), sr1.new Path(i, sr2.getName(), paths.get(i).getEdgeList()));
 				}
 			}
 		}

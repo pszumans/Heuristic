@@ -109,6 +109,7 @@ public class Parser {
 		while (true) {
 			s.nextLine();
 			String name = s.next();
+			System.out.println(name);
 			if (name.charAt(0) == '#')
 				continue;
 			else if (name.equals(";"))

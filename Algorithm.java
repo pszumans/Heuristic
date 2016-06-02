@@ -71,6 +71,11 @@ public class Algorithm {
 					dN = d.getName();
 			}
 			
+//			boolean ids1 = dc.serveDemandInRack(dc.getDemandToServe(1), dc.getRandomRack(), new HashSet<>());
+//			boolean ids2 = dc.serveDemandInRack(dc.getDemandToServe(2), dc.getRandomRack(), new HashSet<>());
+//
+//			isDemandServed = ids1 && ids2;
+			
 			if (isDemandServed) {
 				boolean b = sa.checkSolution(dc.countTotalCost());
 //				System.out.println(dc);
@@ -82,13 +87,16 @@ public class Algorithm {
 				}
 				dc.retrieveUnservedDemands();
 				dc.removeDemand(dc.getRandomDemand());
+//
+//				dc.removeAllDemands();
+
 //				System.out.println(dc);
 //				System.out.println("########################## COST: " + sa.getBestSolution());
 //
 			}
 			else {
-				if (dN != null)
-					System.out.println(dN);
+//				if (dN != null)
+//					System.out.println(dN);
 //				System.out.println("##########  BANG  !!!!!!!!! " + d.getName());
 //				System.out.println(dc.sb);
 				dc.removeAllDemands();
@@ -96,40 +104,13 @@ public class Algorithm {
 //				System.out.println();
 			}
 
-
-//			if(isDemandServed && isDemand2Served) { 
-//			int newSolution = dc.countTotalCost();
-//			System.out.println("NEW " + newSolution);
-//			sa.checkSolution(newSolution);
-////			newPunto = dc.countTotalCost();
-////			if (newPunto < punto)
-////				punto = newPunto;
-//			}
 			
 //			System.out.println(dc);
 //			System.out.println("########################## COST: " + sa.getBestSolution());
 ////			System.out.println("########################## COST: " + punto);
 			
-//			Integer demandsCount = new Integer(dc.getDemandsAmount());
-//			int demandsCount = dc.getDemandsAmount();
-//			for (int d = 0; d < demandsCount; d++)
-//				dc.removeDemand(dc.getDemand(0));
-			
 //			System.out.println(dc);
 			
-//			for (int sr = 0; sr < dc.getRacksAmount(); sr++)
-//				for (int ds = 0; ds < dc.getRack(sr).getDataServersAmount(); ds++)
-//					if (dc.getRack(sr).getDataServer(ds).isEmpty()) {
-//						System.out.println(dc.sb.toString());
-//						dc.getClass();
-//					}
-//			
-//			for (int sr = 0; sr < dc.getRacksAmount(); sr++)
-//				for (int cs = 0; cs < dc.getRack(sr).getCompServersAmount(); cs++)
-//					if (dc.getRack(sr).getCompServer(cs).isEmpty()) {
-//					System.out.println(dc.sb.toString());
-//						dc.getClass();
-//					}
 			
 			dc.sDC = 0;
 			dc.sDCS = 0;
@@ -143,9 +124,9 @@ public class Algorithm {
 		sa.reduceTemp();
 		}
 		System.out.println(bestConfig);
-		dc.removeAllDemands();
-		System.out.println(dc);
-		System.out.println();
+//		dc.removeAllDemands();
+//		System.out.println(dc);
+//		System.out.println();
 //		for (Link link : graph.getLinks())
 //			System.out.println(link);
 	}

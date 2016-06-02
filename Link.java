@@ -164,7 +164,8 @@ public class Link extends DefaultWeightedEdge implements Comparator<Link> {
 		sb.append("\n### " + getName());
 		sb.append(" (" + getRackName(0) + ", " + getRackName(1) + ")");
 		sb.append(" ###\n");
-		sb.append("capacity: " + getCapacity());
+		sb.append("capacity (used +remained): " + getCapacity());
+		sb.append(" (" + getCapacityUsed() + " +" + getCapacityRemained() + ")");
 		for (String key: flowPerDemand.keySet()) {
 			sb.append("\n###- " + key + " -###\n");
 			sb.append("flow used: " + flowPerDemand.get(key));
