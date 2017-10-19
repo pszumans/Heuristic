@@ -1,5 +1,8 @@
+import java.io.BufferedWriter;
 import java.io.File;
-import java.util.List;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 
 public class Writer implements Parser.AMPLWriter {
 
@@ -8,7 +11,7 @@ public class Writer implements Parser.AMPLWriter {
 	public static final int COMP_SERVERS_KEY = 2;
 	public static final int RACKS_KEY = 3;
 	public static final int LINKS_KEY = 4;
-	public static final int ARCS_KEY = 5;
+	public static final int EXTRA_KEY = 5;
 	
 	private final String DEMANDS = "REQUESTS";
 	private final String DATA_SERVERS = "DATA_SERVERS";
@@ -16,101 +19,105 @@ public class Writer implements Parser.AMPLWriter {
 	private final String RACKS = "RACKS";
 	private final String LINKS = "LINKS";
 	private final String ARCS = "ARCS";
+	private final String SETS[] = {DEMANDS, DATA_SERVERS, COMP_SERVERS, RACKS, LINKS, ARCS};
+
 	
 	private File file;
-	private StringBuilder[] sb;
+	private PrintWriter pw;
+	
+	private StringBuilder[] head;
+	private StringBuilder[] data;
 	
 	public Writer(File file) {
-		sb = new StringBuilder[6];
+		this.file = file;
+		init();
 	}
 	
-	public Writer() {
-		sb = new StringBuilder[6];
-		for (int i = 0; i < 6; i++)
-			sb[i] = new StringBuilder();
-
+	public Writer(String filename) {
+		file = new File(filename);
+		init();
 	}
 
-	private void loadDataA(Object[] data, int type) {
-		
-		StringBuilder sb = new StringBuilder();
-		
-		switch (type) {
-		case 1:
-			for (int i = 0; i < data.length; i++) {
-				sb.append(data[i].toString());
-				if (i != data.length)
-					sb.append(", ");
-			}
-			sb.append(";");
-			break;
-		case 2:
-			for (int i = 0; i < data.length; i+=2) {
-				sb.append("(");
-				sb.append(data[i].toString());
-				sb.append(", ");
-				sb.append(data[i+1].toString());
-				sb.append(")");
-				if (i != data.length)
-					sb.append(", ");
-			}
-			sb.append(";");
-			break;
+	private void init() {
+		head = new StringBuilder[6];
+		data = new StringBuilder[6];
+		for (int i = 0; i < 6; i++) {
+			head[i] = new StringBuilder();
+			data[i] = new StringBuilder();
 		}
+		appendSet();
 	}
 	
-	public void loadData(String data, int dataType) {
-		sb[dataType].append(data);
-		sb[dataType].append(", ");
+	
+	@Override
+	public void loadDataHead(String headLine, int dataType) {
+		data[dataType].append("param");
+		if (dataType != EXTRA_KEY)
+			data[dataType].append(":");
+		data[dataType].append(" " + headLine);
+		if (dataType == EXTRA_KEY)
+			data[dataType].append(" := ");
+		else
+			data[dataType].append("\n");
 	}
 	
-	public void loadData(String data1, String data2, int dataType) {
-		sb[dataType].append("(" + data1 + ", " + data2 + ", ");		
-		
-		sb[dataType + 1].append("(" + data1 + ", " + data2 + ", ");	
-		sb[dataType + 1].append("(" + data2 + ", " + data1 + ", ");	
-
-	}
-
-	public void write() {
-		for (int i = 0; i < sb.length; i++) {
-			int start = sb[i].length() - 2;
-			int end = sb[i].length() - 1;
-			sb[i].replace(start, end, ";");
-			sb[i].toString();
+	@Override
+	public void loadData(Object[] dataLine, int dataType) {
+		if (dataType < LINKS_KEY)
+			loadHead(dataLine[0], dataType);
+		else if (dataType == LINKS_KEY)
+			loadHead(dataLine[0], dataLine[1], dataType);
+		for (int i = 0; i < dataLine.length; i++) {
+			data[dataType].append(dataLine[i]);
+			data[dataType].append(" ");
 		}
+		data[dataType].append("\n");
 	}
 	
-	public void loadDataB(String data, int dataType) {
-
-		StringBuilder sb = new StringBuilder();
+	public void loadHead(Object headLine, int dataType) {
+		head[dataType].append(headLine);
+		head[dataType].append(", ");
+	}
+	
+	public void loadHead(Object head1, Object head2, int dataType) {
+		head[dataType].append("(" + head1 + ", " + head2 + "), ");		
 		
-		switch (dataType) {
-		case 0: 
-			sb.append(DEMANDS_KEY);
-			break;
-		case 1:
-			sb.append(DATA_SERVERS_KEY);
-			sb.append(data);
-			break;
-		case 2:
-			sb.append(COMP_SERVERS_KEY);
-			sb.append(data);
-			break;
-		case 3:
-			sb.append(RACKS_KEY);
-			sb.append(data);
-			break;
-		case 4:
-			sb.append(LINKS_KEY);
-			sb.append(data);
-			break;
-		case 5:
-			sb.append(ARCS_KEY);
-			sb.append(data);
-			break;
+		head[dataType + 1].append("(" + head1 + ", " + head2 + "), ");	
+		head[dataType + 1].append("(" + head2 + ", " + head1 + "), ");	
+
+	}
+
+	public void write() throws IOException {
+		pw = new PrintWriter(new BufferedWriter(new FileWriter(file)));
+		for (int i = 0; i < head.length; i++) {
+			changeEnd(head[i]);
+			head[i].toString();
+			pw.write(head[i].toString());
 		}
 		
+		for (int i = 0; i < data.length; i++) {
+			data[i].append(";\n\n");
+			data[i].toString();
+			pw.write(data[i].toString());
+		}
+		
+		pw.close();
+	}
+	
+	private void changeEnd(StringBuilder sb) {
+		int start = sb.length() - 2;
+		int end = sb.length();
+		sb.replace(start, end, ";\n");
+		if (sb == head[head.length - 1])
+			sb.append("\n");
+	}
+
+	private void appendSet() {
+		for (int i = 0; i < SETS.length; i++) {
+			head[i].append("set ");
+			head[i].append(SETS[i]);
+			head[i].append(" := ");
+		}
 	}
 	
 }

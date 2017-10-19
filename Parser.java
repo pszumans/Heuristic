@@ -3,7 +3,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
@@ -21,7 +20,6 @@ public class Parser {
 	
 	private final int COMP = 0;
 	private final int DATA = 1;
-//	private final String[] KEYS = {LINKS_KEY, DEMANDS_KEY, COMP_SERVERS_KEY, DATA_SERVERS_KEY, RACKS_KEY};
 	
 	private List<Demand> demands;
 	private List<Rack> racks;
@@ -32,8 +30,8 @@ public class Parser {
 	
 	private AMPLWriter wr;
 	
-	private File file;// = new File(filename);
-	private Scanner s;// = new Scanner(file);
+	private File file;
+	private Scanner sc;
 
 	public Parser(String filename) throws FileNotFoundException {
 		file = new File(filename);
@@ -41,64 +39,85 @@ public class Parser {
 
 	public void parse() throws FileNotFoundException {
 
-		s = new Scanner(new BufferedReader(new FileReader(file)));
-		while (s.hasNextLine()) {
-			String data = s.next();
+		String data = null;
+		sc = new Scanner(new BufferedReader(new FileReader(file)));
+		while (sc.hasNextLine()) {
+			if (sc.hasNext())
+				data = sc.next();
 			if (data.matches("param:*"))
-				addData(s.next());
-//			if (data.charAt(0) == '#')
-//				addData(data);
+				addData(sc.next());
 			else
-				s.nextLine();
+				sc.nextLine();
 		}
+		sc.close();
 	}
 
 	public void addData(String dataKey) {
 
+		String head = null;
+		
 		switch (dataKey) {
 		case LINKS_KEY:
+			head = dataKey + sc.nextLine();
+			loadDataHead(head, Writer.LINKS_KEY);
 			parseLinks();
 			break;
 		case DEMANDS_KEY:
+			head = dataKey + sc.nextLine();
+			loadDataHead(head, Writer.DEMANDS_KEY);
 			parseDemands();
 			break;
 		case COMP_SERVERS_KEY:
+			head = dataKey + sc.nextLine();
+			loadDataHead(head, Writer.COMP_SERVERS_KEY);
 			parseServers(COMP);
 			break;
 		case DATA_SERVERS_KEY:
+			head = dataKey + sc.nextLine();
+			loadDataHead(head, Writer.DATA_SERVERS_KEY);
 			parseServers(DATA);
 			break;
 		case RACKS_KEY:
+			head = dataKey + sc.nextLine();
+			loadDataHead(head, Writer.RACKS_KEY);
 			parseRacks();
 			break;
 		case MIN_DEMANDS:
+			loadDataHead(dataKey, Writer.EXTRA_KEY);
 			parseMinDemands();
 			break;
 		}
 	}
 	
+	private void loadDataHead(String headLine, int dataType) {
+		if (wr != null)
+			wr.loadDataHead(headLine, dataType);
+	}
+
 	private void parseDemands() {
 		demands = new ArrayList<Demand>();
 		while (true) {
-			s.nextLine();
-			String name = s.next();
-			if (name.charAt(0) == '#')
+			String name = sc.next();
+			if (name.charAt(0) == '#') {
+				sc.nextLine();
 				continue;
+			}
 			else if (name.equals(";"))
 				break;
-			int storage = s.nextInt();
+			int storage = sc.nextInt();
 			int power = -1;
-			if (s.hasNext(Pattern.compile("\\d+;"))) {
-				power = Integer.parseInt(s.next().replace(";",""));
+			if (sc.hasNext(Pattern.compile("\\d+;"))) {
+				power = Integer.parseInt(sc.next().replace(";",""));
 				demands.add(new Demand(name, storage, power));
-				wr.loadData(name, Writer.DEMANDS_KEY);
+				loadData(new Object[]{name, storage, power}, Writer.DEMANDS_KEY);
 				break;
 			}
 			else {
-				power = s.nextInt();
+				power = sc.nextInt();
 			}
-			wr.loadData(name, Writer.DEMANDS_KEY);
 			demands.add(new Demand(name, storage, power));
+			loadData(new Object[]{name, storage, power}, Writer.DEMANDS_KEY);
+			sc.nextLine();
 		}
 	}
 	
@@ -108,78 +127,85 @@ public class Parser {
 		else
 			dataServers = new ArrayList<DataServer>();
 		while (true) {
-			s.nextLine();
-			String name = s.next();
-			System.out.println(name);
-			if (name.charAt(0) == '#')
+			String name = sc.next();
+			if (name.charAt(0) == '#') {
+				sc.nextLine();
 				continue;
+			}
 			else if (name.equals(";"))
 				break;
-			int serverSpec = s.nextInt();
-			int cost = s.nextInt();
+			int serverSpec = sc.nextInt();
+			int cost = sc.nextInt();
 			int size = -1;
-			if (s.hasNext(Pattern.compile("\\d+;"))) {
-				size = Integer.parseInt(s.next().replace(";",""));
+			if (sc.hasNext(Pattern.compile("\\d+;"))) {
+				size = Integer.parseInt(sc.next().replace(";",""));
 				if (type == COMP) {
 					compServers.add(new CompServer(name, serverSpec, cost, size));
-					wr.loadData(name, Writer.COMP_SERVERS_KEY);
+					loadData(new Object[]{name, serverSpec, cost, size}, Writer.COMP_SERVERS_KEY);
 				}
 				else {
 					dataServers.add(new DataServer(name, serverSpec, cost, size));
-					wr.loadData(name, Writer.DATA_SERVERS_KEY);
+					loadData(new Object[]{name, serverSpec, cost, size}, Writer.DATA_SERVERS_KEY);
 				}
 				break;
 			}
 			else {
-				size = s.nextInt();
+				size = sc.nextInt();
 			}
 			if (type == COMP) {
 				compServers.add(new CompServer(name, serverSpec, cost, size));
-				wr.loadData(name, Writer.COMP_SERVERS_KEY);
+				loadData(new Object[]{name, serverSpec, cost, size}, Writer.COMP_SERVERS_KEY);
 			}
 			else {
 				dataServers.add(new DataServer(name, serverSpec, cost, size));
-				wr.loadData(name, Writer.DATA_SERVERS_KEY);
+				loadData(new Object[]{name, serverSpec, cost, size}, Writer.DATA_SERVERS_KEY);
 			}
+			if (sc.hasNextLine())
+				sc.nextLine();
 		}
 	}
 	
 	private void parseRacks() {
 		racks = new ArrayList<Rack>();
 		while (true) {
-			s.nextLine();
-			String name = s.next();
-			if (name.charAt(0) == '#')
+			String name = sc.next();
+			if (name.charAt(0) == '#') {
+				sc.nextLine();
 				continue;
+			}
 			else if (name.equals(";"))
 				break;
 			int size = -1;
-			if (s.hasNext(Pattern.compile("\\d+;"))) {
-				size = Integer.parseInt(s.next().replace(";",""));
+			if (sc.hasNext(Pattern.compile("\\d+;"))) {
+				size = Integer.parseInt(sc.next().replace(";",""));
 				racks.add(new Rack(name, size));
-				wr.loadData(name, Writer.RACKS_KEY);
+//				loadData(new Object[]{name, size}, Writer.RACKS_KEY);
 				break;
 			}
 			else {
-				size = s.nextInt();
+				size = sc.nextInt();
 			}
 			racks.add(new Rack(name, size));
-			wr.loadData(name, Writer.RACKS_KEY);
+//			loadData(new Object[]{name, size}, Writer.RACKS_KEY);
 		}
+		if (sc.hasNextLine())
+			sc.nextLine();
 	}
 	
 	private void parseMinDemands() {
 		while (true) {
-			if (s.hasNext(Pattern.compile("\\d+;"))) {
-				minDemands = Integer.parseInt(s.next().replace(";",""));
+			if (sc.hasNext(Pattern.compile("\\d+;"))) {
+				minDemands = Integer.parseInt(sc.next().replace(";",""));
+				loadData(new Object[]{minDemands}, Writer.EXTRA_KEY);
 				break;
 			}
-			else if (s.hasNext(Pattern.compile("\\d+"))) {
-				minDemands = s.nextInt();
+			else if (sc.hasNext(Pattern.compile("\\d+"))) {
+				minDemands = sc.nextInt();
+				loadData(new Object[]{minDemands}, Writer.EXTRA_KEY);
 				break;
 			}
 			else {
-				s.next();
+				sc.next();
 			}
 		}
 	}
@@ -187,31 +213,40 @@ public class Parser {
 	private void parseLinks() {
 		links = new HashSet<Link>();
 		while (true) {
-			s.nextLine();
-			String sr1 = s.next();
-			if (sr1.charAt(0) == '#')
+			String sr1 = sc.next();
+			if (sr1.charAt(0) == '#') {
+				sc.nextLine();
 				continue;
+			}
 			else if (sr1.equals(";"))
 				break;
-			String sr2 = s.next();
+			String sr2 = sc.next();
 			int capacity = -1;
-			if (s.hasNext(Pattern.compile("\\d+;"))) {
-				capacity = Integer.parseInt(s.next().replace(";",""));
+			if (sc.hasNext(Pattern.compile("\\d+;"))) {
+				capacity = Integer.parseInt(sc.next().replace(";",""));
 				links.add(new Link(capacity, sr1, sr2));
-				wr.loadData(sr1, sr2, Writer.LINKS_KEY);
+//				loadData(new Object[]{sr1, sr2, capacity}, Writer.LINKS_KEY);
 				break;
 			}
 			else {
-				capacity = s.nextInt();
+				capacity = sc.nextInt();
 			}
 			links.add(new Link(capacity, sr1, sr2));
-			wr.loadData(sr1, sr2, Writer.LINKS_KEY);
+//			loadData(new Object[]{sr1, sr2, capacity}, Writer.LINKS_KEY);
 		}
+		if (sc.hasNextLine())
+			sc.nextLine();
 	}
 	
+	private void loadData(Object[] data, int dataType) {
+		if (wr != null)
+			wr.loadData(data, dataType);
+		
+	}
+
 	public interface AMPLWriter {
-		public void loadData(String data, int dataType);
-		public void loadData(String data1, String data2, int dataType);
+		public void loadData(Object[] data, int dataType);
+		public void loadDataHead(String headLine, int dataType);
 	}
 	
 	public void setAMPLWriter(AMPLWriter wr) {

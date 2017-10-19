@@ -19,10 +19,18 @@ public class Rack {
 	private List<Demand.CompDemand> compDemands;
 	private List<DataServer> dataServers;
 	private List<CompServer> compServers;
-//	private List<Server> servers;
 	private Map<String, List<Path>> paths;
 	
 	private ServersPool servers;
+	
+	public Rack(Rack rack) {
+		name = rack.name;
+		numberOfShelves = rack.numberOfShelves;
+		shelvesUsed = rack.shelvesUsed;
+		shelvesEmpty = rack.shelvesEmpty;
+		dataServers = rack.dataServers;
+		compServers = rack.compServers;
+	}
 	
 	public Rack(int nr, int numberOfShelves) {
 		name = RACK + nr;
@@ -43,7 +51,6 @@ public class Rack {
 		dataServers = new ArrayList<DataServer>();
 		compServers = new ArrayList<CompServer>();
 		paths = new HashMap<String, List<Path>>();
-		
 	}
 	
 	public String getName() {
@@ -76,9 +83,29 @@ public class Rack {
 		return paths.get(secondRack);
 	}
 
-//	public void setPaths(List<Path> paths) {
-//		this.paths = paths;
-//	}
+	private DataServer getRandomDataServer(Set<DataServer> checkedServers) {
+		DataServer ds = null;
+		int dataServersCount = checkedServers.size();
+		if (checkedServers.size() != dataServers.size()) {
+			while (dataServersCount == checkedServers.size()) {
+				ds = dataServers.get(new Random().nextInt(dataServers.size()));
+				checkedServers.add(ds);
+			}
+		}
+		return ds;
+	}
+	
+	private CompServer getRandomCompServer(Set<CompServer> checkedServers) {
+		CompServer cs = null;
+		int compServersCount = checkedServers.size();
+		if (checkedServers.size() != compServers.size()) {
+			while (compServersCount == checkedServers.size()) {
+				cs = compServers.get(new Random().nextInt(compServers.size()));
+				checkedServers.add(cs);
+			}
+		}
+		return cs;
+	}
 	
 	public void addDataDemand(Demand.DataDemand dd) {
 		dataDemands.add(dd);
@@ -123,6 +150,15 @@ public class Rack {
 			compServers.add((CompServer) s);
 		shelvesUsed += s.size;
 		shelvesEmpty -= s.size;
+	}
+	
+	public void removeServer(Server s) {
+		if (s instanceof DataServer)
+			dataServers.remove(s);
+		else
+			compServers.remove(s);
+		shelvesUsed -= s.size;
+		shelvesEmpty += s.size;
 	}
 	
 	public void removeDataServer(int index) {
@@ -170,9 +206,12 @@ public class Rack {
 	
 	public boolean serveDataDemand(Demand.DataDemand dd) {
 		
-		boolean isDDServed = useInstalledDataServers(dd);
+		boolean isDDServed = false;
 		
-		if (!isDDServed) {
+		if (!dataServers.isEmpty())
+			useInstalledDataServers(dd);
+		
+		if (!isDDServed && shelvesEmpty > 0) {
 			isDDServed = useNewDataServers(dd);
 		}
 		
@@ -184,17 +223,18 @@ public class Rack {
 	}
 	
 	private boolean useInstalledDataServers(Demand.DataDemand dd) {
-		List<DataServer> shuffledDataServers = dataServers;
-		Collections.shuffle(shuffledDataServers);
-		
+
 		boolean isDDServed = false;
+		Set<DataServer> checkedServers = new HashSet<DataServer>();
+		DataServer ds = getRandomDataServer(checkedServers);
 		
-		for (DataServer ds: shuffledDataServers) {
-			if (isEnoughSpace(ds))
-				isDDServed = useDataServer(dd, ds);
+		while (ds != null) {
+			isDDServed = useDataServer(dd, ds);
 			if (isDDServed)
-				return true;				
+				return true;
+			ds = getRandomDataServer(checkedServers);
 		}
+
 		return false;
 	}
 	
@@ -203,8 +243,8 @@ public class Rack {
 		boolean isDDServed = false;
 		
 		Set<String> tooSmallDataServers = new HashSet<String>();
-		int dataServersAmount = servers.getDataServerAmount();
-		while (!isDDServed && tooSmallDataServers.size() < dataServersAmount) {
+		int dataServersCount = servers.getDataServersCount();
+		while (!isDDServed && tooSmallDataServers.size() < dataServersCount) {
 			DataServer ds = servers.getRandomDataServer();
 			if (isEnoughSpace(ds)) {
 				isDDServed = useDataServer(dd, ds);
@@ -213,13 +253,17 @@ public class Rack {
 				tooSmallDataServers.add(ds.getName());
 		}
 		return isDDServed;
+		
+		
 	}
 	
 	public boolean serveCompDemand(Demand.CompDemand cd) {
 		
-		boolean isCDServed = useInstalledCompServers(cd);
+		boolean isCDServed = false;
+		if (!compServers.isEmpty())
+			isCDServed = useInstalledCompServers(cd);
 		
-		if (!isCDServed) {
+		if (!isCDServed && shelvesEmpty > 0) {
 			isCDServed = useNewCompServers(cd);
 		}
 		
@@ -232,16 +276,18 @@ public class Rack {
 	}
 	
 	private boolean useInstalledCompServers(Demand.CompDemand cd) {
-		List<CompServer> shuffledCompServers = compServers;
-		Collections.shuffle(shuffledCompServers);
 		
 		boolean isCDServed = false;
+		Set<CompServer> checkedServers = new HashSet<CompServer>();
+		CompServer cs = getRandomCompServer(checkedServers);
 		
-		for (CompServer cs: shuffledCompServers) {
-				isCDServed = useCompServer(cd, cs);
+		while (cs != null) {
+			isCDServed = useCompServer(cd, cs);
 			if (isCDServed)
-				return true;				
+				return true;
+			cs = getRandomCompServer(checkedServers);
 		}
+
 		return false;
 	}
 	
@@ -250,8 +296,8 @@ public class Rack {
 		boolean isCDServed = false;
 		
 		Set<String> tooSmallCompServers = new HashSet<String>();
-		int compServersAmount = servers.getCompServerAmount();
-		while (!isCDServed && tooSmallCompServers.size() < compServersAmount) {
+		int compServersCount = servers.getCompServersCount();
+		while (!isCDServed && tooSmallCompServers.size() < compServersCount) {
 			CompServer cs = servers.getRandomCompServer();
 			if (isEnoughSpace(cs))
 				isCDServed = useCompServer(cd, cs);
@@ -263,10 +309,12 @@ public class Rack {
 	}
 	
 	public interface ServersPool {
+		public DataServer getDataServer(int index);
+		public CompServer getCompServer(int index);
 		public DataServer getRandomDataServer();
 		public CompServer getRandomCompServer();
-		public int getDataServerAmount();
-		public int getCompServerAmount();
+		public int getDataServersCount();
+		public int getCompServersCount();
 	}
 	
 	public void addPath(String secondRack, Path path) {
@@ -276,25 +324,23 @@ public class Rack {
 		paths.get(secondRack).add(path);		
 	}
 		
-	public Path getRandomPath(String secondRack) {
-//		Path path = null;
-//		int pathsCount = chosenPaths.size();
-//		if (pathsCount != paths.get(secondRack).size()) {
-//			while (pathsCount == chosenPaths.size()) {
-//				List<Path> pathsToChoose = paths.get(secondRack);
-//				path = pathsToChoose.get(new Random().nextInt(pathsToChoose.size()));
-//				chosenPaths.add(path.getIndex());
-//			}
-//		}
-//		return path;
-		return paths.get(secondRack).get(new Random().nextInt(this.paths.get(secondRack).size()));
+	public Path getRandomPath(String secondRack, Set<Integer> chosenPaths) {
+		Path path = null;
+		while (chosenPaths.size() != paths.get(secondRack).size()) {
+			path = paths.get(secondRack).get(new Random().nextInt(this.paths.get(secondRack).size()));
+			int pathsCount = chosenPaths.size();
+				chosenPaths.add(path.getIndex());
+			if (pathsCount != chosenPaths.size())
+				break;
+		}
+		return path;
 	}
 	
 	public DataServer getDataServer(int index) {
 		return dataServers.get(index );
 	}
 	
-	public int getDataServersAmount() {
+	public int getDataServersCount() {
 		return dataServers.size();
 	}
 	
@@ -302,18 +348,17 @@ public class Rack {
 		return compServers.get(index);
 	}
 		
-	public int getCompServersAmount() {
+	public int getCompServersCount() {
 		return compServers.size();
 	}
 	
 	public boolean transportDemandToRack(String demandName, int toUseCapacity, String secondRack) {
 		Set<Integer> chosenPaths = new HashSet<Integer>();
 		while (chosenPaths.size() != paths.get(secondRack).size()) {
-			Path path = getRandomPath(secondRack);
-			int pathsCount = chosenPaths.size();
-			chosenPaths.add(path.getIndex());
-			if (pathsCount == chosenPaths.size())
-				toUseCapacity = path.transportDemand(demandName, toUseCapacity);
+			Path path = getRandomPath(secondRack, chosenPaths);
+			if (path == null)
+				return false;
+			toUseCapacity = path.transportDemand(demandName, toUseCapacity);
 			if (toUseCapacity == 0)
 				return true;
 		}
@@ -327,14 +372,69 @@ public class Rack {
 		}
 	}
 	
+	public List<Server[]> tryToDecreaseCost() {
+		List<Server[]> replacedServers = new ArrayList<Server[]>();
+		int dataServersCount = dataServers.size();
+		for (int i = 0; i < dataServersCount; i++) {
+			for (int j = 0; j < servers.getDataServersCount(); j++) {
+				DataServer ds = dataServers.get(i);
+				DataServer replaceDS = servers.getDataServer(j);
+				if (ds.getCost() <= replaceDS.getCost())
+					break;
+				else if (ds.getStorageUsed() <= replaceDS.getStorage()
+						&& shelvesEmpty + ds.getSize() >= replaceDS.getSize()) {
+					transferServers(ds, replaceDS);
+					replacedServers.add(new Server[]{replaceDS, ds});
+					i--;
+					break;
+				}
+			}
+		}
+		int compServersCount = compServers.size();
+		for (int i = 0; i < compServersCount; i++) {
+			for (int j = 0; j < servers.getCompServersCount(); j++) {
+				CompServer cs = compServers.get(i);
+				CompServer replaceCS = servers.getCompServer(j);
+				if (cs.getCost() <= replaceCS.getCost())
+					break;
+				else if (cs.getPowerUsed() <= replaceCS.getPower()
+						&& shelvesEmpty + cs.getSize() >= replaceCS.getSize()) {
+					transferServers(cs, replaceCS);
+					replacedServers.add(new Server[]{replaceCS, cs});
+					i--;
+					break;
+				}
+			}
+		}
+		return replacedServers;
+	}
+	
+	private void transferServers(Server toTransferServer, Server server) {
+		if (server instanceof DataServer)
+			((DataServer) toTransferServer).transferDemands((DataServer) server);
+		else
+			((CompServer) toTransferServer).transferDemands((CompServer) server);
+
+		replaceServers(toTransferServer, server);
+	}
+	
+	public void replaceServers(Server toReplaceServer, Server server) {
+		removeServer(toReplaceServer);
+		addServer(server);
+	}
+	
 	public void setServersPool(ServersPool sP) {
 		servers = sP;
 	}
 	
 	public String toString() {
+		return name + " (" + numberOfShelves + ")";
+	}
+	
+	public String toAdvString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("\n###---> " + getName() + " <---###\n");
-		sb.append("size: " + getSize() + "\n");
+		sb.append("\n### " + getName() + " ###\n");
+		sb.append("### size: " + getSize() + "\n");
 
 		for (DataServer ds: dataServers) {
 			sb.append(ds);
@@ -389,14 +489,12 @@ public class Rack {
 		private int index;
 		private String secondRack;
 		private List<Link> links;
-//		private int capacity;
 		
 
 		public Path(int index, String secondRack, List<Link> links) {
 			this.index = index;
 			this.setSecondRack(secondRack);
 			this.links = links;
-//			countCapacity();
 			}
 
 
@@ -418,35 +516,12 @@ public class Rack {
 			this.secondRack = secondRack;
 		}
 
-//		public int getCapacity() {
-//			return capacity;
-//		}
-//		
-//		public void setCapacity(int capacity) {
-//			this.capacity = capacity;
-//		}
-
-//		public void countCapacity() {
-//			List<Link> temp = links;
-//			Collections.sort(temp, new Link());
-//			capacity = temp.get(0).getCapacityRemained();
-//		}
-		
 		private Link getThinnestLink() {
 			Collections.sort(links, new Link());
 			return links.get(0);
 		}
 		
 		public int transportDemand(String demandName, int toUseCapacity) {
-			
-//			int usedCapacity = Integer.MAX_VALUE;
-//			for (Link link: links) {
-//				int temp = link.checkCapacityUsed(toUseCapacity);
-//				if (temp < usedCapacity)
-//					usedCapacity = temp;
-//				if (usedCapacity == 0)
-//					break;
-//			}
 			
 			int usedCapacity = getThinnestLink().checkCapacityUsed(toUseCapacity);
 			
@@ -482,4 +557,5 @@ public class Rack {
 		}
 		
 	}
+
 }

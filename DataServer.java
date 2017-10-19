@@ -82,22 +82,28 @@ public class DataServer extends Server {
 		}
 	}
 	
+	public void transferDemands(DataServer ds) {
+		for (String demandName: storagePerDemand.keySet())
+			ds.addStorageUsed(demandName, storagePerDemand.get(demandName));
+	}
+	
 	public boolean isEmpty() {
 		return storagePerDemand.isEmpty();
 	}
 	
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("\n###** " + getName() + " **###\n");
-		sb.append("storage: " + getStorage());
+		sb.append("\n#### " + getName() + " ##\n");
+		sb.append("#### storage: " + getStorage());
 		sb.append(", cost: " + getCost());
 		sb.append(", size: " + getSize());
 		for (String key: storagePerDemand.keySet()) {
-			sb.append("\n###- " + key + " -###\n");
-			sb.append("storage served: " + storagePerDemand.get(key));
+			sb.append("\n##### " + key + " #\n");
+			sb.append("##### storage served: " + storagePerDemand.get(key));
 		}
 		sb.append("\n");
 		return sb.toString();
 		
 	}
+
 }

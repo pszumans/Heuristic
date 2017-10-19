@@ -2,7 +2,7 @@ import java.util.Random;
 
 public class SimulatedAnnealing {
 
-	private final int INITIAL = -1;
+	public final int INITIAL = Integer.MAX_VALUE;
 	
 	private double temp;
 	private final double alpha;
@@ -25,7 +25,7 @@ public class SimulatedAnnealing {
 	}
 
 	public boolean checkSolution(int newSolution) {
-		if (newSolution <= bestSolution || bestSolution == INITIAL) {
+		if (newSolution <= bestSolution) {
 			bestSolution = newSolution;
 			return true;
 		}

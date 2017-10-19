@@ -160,15 +160,19 @@ public class Link extends DefaultWeightedEdge implements Comparator<Link> {
 	}
 	
 	public String toString() {
+		return getName() + " [" + getRackName(0) + ", " + getRackName(1) + "]" + " (" + capacity + ")";
+	}
+	
+	public String toAdvString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("\n### " + getName());
+		sb.append("\n#### " + getName());
 		sb.append(" (" + getRackName(0) + ", " + getRackName(1) + ")");
-		sb.append(" ###\n");
-		sb.append("capacity (used +remained): " + getCapacity());
-		sb.append(" (" + getCapacityUsed() + " +" + getCapacityRemained() + ")");
+		sb.append(" ####\n");
+		sb.append("#### capacity: " + getCapacity());
+//		sb.append(" (" + getCapacityUsed() + " +" + getCapacityRemained() + ")");
 		for (String key: flowPerDemand.keySet()) {
-			sb.append("\n###- " + key + " -###\n");
-			sb.append("flow used: " + flowPerDemand.get(key));
+			sb.append("\n##### " + key + " ###\n");
+			sb.append("##### flow used: " + flowPerDemand.get(key));
 		}
 		sb.append("\n");
 		return sb.toString();

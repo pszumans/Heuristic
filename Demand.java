@@ -64,7 +64,6 @@ public class Demand {
 		private final int storage;
 		private int storageServed;
 		private int storageRemained;
-//		private List<DataServer> usedDataServers;
 		
 		public DataDemand(String demandName, int storage) {
 			this.demandName = demandName;
@@ -84,15 +83,11 @@ public class Demand {
 		public int getStorageServed() {
 			return storageServed;
 		}
-//
+
 		public void setStorageServed(int storageServed) {
 			this.storageServed = storageServed;
 			storageRemained = storage - storageServed;
 		}
-//
-//		public void addDataServer(DataServer ds) {
-//			usedDataServers.add(ds);
-//		}
 
 		public int getStorageRemained() {
 			return storageRemained;
@@ -116,7 +111,6 @@ public class Demand {
 		private final int computation;
 		private int computationServed;
 		private int computationRemained;
-//		private List<CompServer> usedCompServers;
 
 		public CompDemand(String demandName, int computation) {
 			this.demandName = demandName;
@@ -150,14 +144,6 @@ public class Demand {
 			this.computationRemained = computationRemained;
 			computationServed = computation - computationRemained;
 		}
-//
-//		public void addCompServer(CompServer cs) {
-//			usedCompServers.add(cs);
-//		}
-//		
-//		public void removeCompServer(CompServer cs) {
-//			usedCompServers.remove(cs);
-//		}
 	}
 
 }

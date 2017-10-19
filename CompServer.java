@@ -33,10 +33,6 @@ public class CompServer extends Server {
 	
 	}
 	
-//	public String getName() {
-//		return name;
-//	}
-
 	public int getPower() {
 		return power;
 	}
@@ -86,15 +82,20 @@ public class CompServer extends Server {
 		}
 	}
 	
+	public void transferDemands(CompServer cs) {
+		for (String demandName: powerPerDemand.keySet())
+			cs.addPowerUsed(demandName, powerPerDemand.get(demandName));		
+	}
+	
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("\n###** " + getName() + " **###\n");
-		sb.append("power: " + getPower());
+		sb.append("\n#### " + getName() + " ###\n");
+		sb.append("#### power: " + getPower());
 		sb.append(", cost: " + getCost());
 		sb.append(", size: " + getSize());
 		for (String key: powerPerDemand.keySet()) {
-			sb.append("\n###- " + key + " -###\n");
-			sb.append("computation served: " + powerPerDemand.get(key));
+			sb.append("\n##### " + key + " ##\n");
+			sb.append("##### computation served: " + powerPerDemand.get(key));
 		}
 		sb.append("\n");
 		return sb.toString();
@@ -104,4 +105,5 @@ public class CompServer extends Server {
 	public boolean isEmpty() {
 		return powerPerDemand.isEmpty();
 	}
+
 }

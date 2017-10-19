@@ -1,17 +1,10 @@
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-/**
- * 
- */
-
-/**
- * @author Szuman
- *
- */
 public class DataCenter implements Rack.ServersPool {
 
 	private final List<Demand> demandsToServe;
@@ -22,16 +15,12 @@ public class DataCenter implements Rack.ServersPool {
 	private List<CompServer> compServers;
 
 	private List<Demand> servedDemands;
-//	private Set<String> demandsChosen;
-	// private Set<String> racksChosen;
 
-	public int sDC = 0;
-	public int sDCS = 0;
-	public StringBuilder sb = new StringBuilder();
-	public StringBuilder sDCSsb = new StringBuilder();
-
+	
 	public DataCenter(List<DataServer> dataServers, List<CompServer> compServers, List<Demand> demandsToServe,
 			int minDemandsToServe, GraphBuilder graph) {
+		Collections.sort(dataServers, new Server());
+		Collections.sort(compServers, new Server());
 		this.dataServers = dataServers;
 		this.compServers = compServers;
 		this.demandsToServe = demandsToServe;
@@ -39,8 +28,6 @@ public class DataCenter implements Rack.ServersPool {
 		racks = graph.getRacks();
 		links = graph.getLinks();
 		servedDemands = new ArrayList<Demand>();
-//		demandsChosen = new HashSet<String>();
-		// racksChosen = new HashSet<String>();
 		setServersPools();
 	}
 
@@ -52,27 +39,34 @@ public class DataCenter implements Rack.ServersPool {
 		return minDemandsToServe;
 	}
 
+	@Override
 	public DataServer getDataServer(int index) {
 		return new DataServer(dataServers.get(index));
 	}
-
-	public DataServer getRandomDataServer() {
-		return new DataServer(dataServers.get(new Random().nextInt(dataServers.size())));
-	}
-
+	
+	@Override
 	public CompServer getCompServer(int index) {
 		return new CompServer(compServers.get(index));
 	}
 
+
+	@Override
+	public DataServer getRandomDataServer() {
+		return new DataServer(dataServers.get(new Random().nextInt(dataServers.size())));
+	}
+
+	@Override
 	public CompServer getRandomCompServer() {
 		return new CompServer(compServers.get(new Random().nextInt(compServers.size())));
 	}
 
-	public int getDataServerAmount() {
+	@Override
+	public int getDataServersCount() {
 		return dataServers.size();
 	}
 
-	public int getCompServerAmount() {
+	@Override
+	public int getCompServersCount() {
 		return compServers.size();
 	}
 
@@ -95,7 +89,7 @@ public class DataCenter implements Rack.ServersPool {
 
 	}
 
-	public int getDemandsToServeAmount() {
+	public int getDemandsToServeCount() {
 		return demandsToServe.size();
 	}
 
@@ -107,7 +101,7 @@ public class DataCenter implements Rack.ServersPool {
 		return servedDemands.get(new Random().nextInt(servedDemands.size()));
 	}
 
-	public int getDemandsAmount() {
+	public int getDemandsCount() {
 		return servedDemands.size();
 	}
 
@@ -119,7 +113,7 @@ public class DataCenter implements Rack.ServersPool {
 		return racks.get(new Random().nextInt(racks.size()));
 	}
 
-	public int getRacksAmount() {
+	public int getRacksCount() {
 		return racks.size();
 	}
 
@@ -129,9 +123,6 @@ public class DataCenter implements Rack.ServersPool {
 			chosenDemands.add(demand.getName());
 		return chosenDemands;
 	}
-	// public Link getLink(int index) {
-	// return links.get(index);
-	// }
 
 	public void addDemand(Demand d) {
 		servedDemands.add(d);
@@ -139,15 +130,11 @@ public class DataCenter implements Rack.ServersPool {
 
 	public void removeDemand(Demand demand) {
 		clearDemand(demand);
-//		demandsChosen.remove(demand.getName());
 		servedDemands.remove(demand);
-		sb.append(demand.getName() + " removed\n");
 	}
 
 	public void clearDemand(Demand demand) {
-		sb.append("clearDemand(" + demand.getName() + ")\n");
 		for (Rack rack : racks) {
-			// rack.resetPaths(demand.getName());
 			resetLinks(demand.getName());
 			if (rack.isDataDemandInstalled(demand.getName()))
 				rack.removeDataDemand(demand.getDataDemand());
@@ -157,41 +144,33 @@ public class DataCenter implements Rack.ServersPool {
 	}
 
 	public void removeAllDemands() {
-		int demandsCount = getDemandsAmount();
+		int demandsCount = getDemandsCount();
 		for (int d = 0; d < demandsCount; d++)
 			removeDemand(getDemand(0));
-//		demandsChosen.removeAll(demandsChosen);
 	}
 
 	public boolean serveDemandInRack(Demand demand, Rack rack, Set<String> checkedRacks) {
+		
 		if (demand == null)
 			return false;
-		sb.append("serveDemandInRack(" + demand.getName() + ", " + rack.getName() + ", " + checkedRacks.size() + ") x "
-				+ ++sDC + "\n");
-//		Demand demand = new Demand(d);
+		
 		Demand.DataDemand dd = demand.getDataDemand();
 
 		checkedRacks.add(rack.getName());
 
-		boolean checkDD = rack.serveDataDemand(dd);
-		if (checkDD) {
-			sb.append(demand.getName() + " DATA Served\n");
-			boolean checkCD = serveDemandFromRack(demand, rack, new HashSet<String>());
-			// boolean checkCD = rack.serveCompDemand(cd);
-			if (!checkCD) {
-				sb.append(demand.getName() + " COMP NOT Served\n");
-				checkCD = serveDemandFromRack(demand, rack, new HashSet<String>());
+		boolean isDDServed = rack.serveDataDemand(dd);
+		if (isDDServed) {
+			boolean isCDServed = serveDemandFromRack(demand, rack, new HashSet<String>());
+			if (!isCDServed) {
+				isCDServed = serveDemandFromRack(demand, rack, new HashSet<String>());
 			}
-			if (checkCD) {
-				sb.append(demand.getName() + " COMP Served\n");
+			if (isCDServed) {
 				addDemand(demand);
 				return true;
 			}
 			clearDemand(demand);
-		} else
-			sb.append(demand.getName() + " DATA NOT Served\n");
-		if (checkedRacks.size() == racks.size()) {
-			sb.append(demand.getName() + " All racks checked\n");
+		}
+		else if (checkedRacks.size() == racks.size()) {
 			clearDemand(demand);
 			return false;
 		}
@@ -200,64 +179,42 @@ public class DataCenter implements Rack.ServersPool {
 	}
 	
 	private boolean serveDemandFromRack(Demand demand, Rack rack, Set<String> checkedRacks) {
-		sb.append("serveDemandInSecondRack(" + demand.getName() + ", " + rack.getName() + ", " + checkedRacks.size()
-				+ ") x " + ++sDCS + " #\n");
+		
+		String demandName = demand.getName();
 		Demand.DataDemand dd = demand.getDataDemand();
 		Demand.CompDemand cd = demand.getCompDemand();
-		String demandName = demand.getName();
-		// rack.updatePathsCapacity(links);
-		// Rack.Path path = rack.chooseRandomPath(dd.getDemandName(),
-		// dd.getStorage());
+		
 		Rack randomRack = getRandomRack();
 		String randomRackName = randomRack.getName();
+		
 		checkedRacks.add(randomRackName);
-		boolean checkCD = false;
+		boolean isCDServed = false;
 		if (randomRackName.equals(rack.getName())) {
-			checkCD = rack.serveCompDemand(cd);
-			if (checkCD)
+			isCDServed = rack.serveCompDemand(cd);
+			if (isCDServed)
 				return true;
 
 		} else {
-//			if (randomRack.getCompServersAmount() > 0)
-//				System.out.println();
-			checkCD = rack.transportDemandToRack(demandName, dd.getStorage(), randomRackName);
-			// if (checkCD)
-			// System.out.println();
+			isCDServed = rack.transportDemandToRack(demandName, dd.getStorage(), randomRackName);
 
-			if (!checkCD) {
-				sb.append("no paths #\n");
-				// rack.resetPaths(demandName);
+			if (!isCDServed) {
 				resetLinks(demandName);
 				if (checkedRacks.size() != racks.size())
-					checkCD = serveDemandFromRack(demand, rack, checkedRacks);
-				return checkCD;
+					isCDServed = serveDemandFromRack(demand, rack, checkedRacks);
+				return isCDServed;
 			}
-			// updatePaths(chosenPaths, demandName);
-//			checkCD = racks.get(racks.indexOf(randomRack)).serveCompDemand(cd);
-			checkCD = randomRack.serveCompDemand(cd);
-			if (checkCD) {
-				sb.append(demand.getName() + " COMP Served #\n");
+			isCDServed = randomRack.serveCompDemand(cd);
+			if (isCDServed) {
 				return true;
 			}
 		}
 		if (checkedRacks.size() != racks.size()) {
-			sb.append("next second Rack #\n");
-			// rack.resetPaths(demandName);
 			resetLinks(demandName);
-			checkCD = serveDemandFromRack(demand, rack, checkedRacks);
+			isCDServed = serveDemandFromRack(demand, rack, checkedRacks);
 		}
-		if (!checkCD) {
-			sb.append(demand.getName() + " COMP NOT Served #\n");
-			// clearDemand(demand);
-		}
-		return checkCD;
+		return isCDServed;
 	}
 
-//	private void updatePaths(List<Rack.Path> paths, String demandName) {
-//		for (Rack rack : racks)
-//			for (Rack.Path path : paths)
-//				rack.updatePaths(path, demandName);
-//	}
 
 	private void resetLinks(String demandName) {
 		for (Link link : links)
@@ -272,21 +229,24 @@ public class DataCenter implements Rack.ServersPool {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		for (Rack rack : racks)
-			sb.append(rack.toString());
+			sb.append(rack.toAdvString());
 		for (Link link: links)
-			sb.append(link.toString());
+			sb.append(link.toAdvString());
 		return sb.toString();
 	}
 
 	public int countTotalCost() {
 		int totalCost = 0;
-		for (int sr = 0; sr < racks.size(); sr++) {
-			for (int ds = 0; ds < racks.get(sr).getDataServersAmount(); ds++)
-				totalCost += racks.get(sr).getDataServer(ds).getCost();
-			for (int cs = 0; cs < racks.get(sr).getCompServersAmount(); cs++)
-				totalCost += racks.get(sr).getCompServer(cs).getCost();
+		for (Rack rack: racks) {
+			List<Server[]> replacedServerInRack = rack.tryToDecreaseCost();
+			for (int ds = 0; ds < rack.getDataServersCount(); ds++)
+				totalCost += rack.getDataServer(ds).getCost();
+			for (int cs = 0; cs < rack.getCompServersCount(); cs++)
+				totalCost += rack.getCompServer(cs).getCost();
+			for (Server[] s: replacedServerInRack)
+				rack.replaceServers(s[0], s[1]);
 		}
 		return totalCost;
 	}
-
+	
 }
